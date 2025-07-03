@@ -13,21 +13,29 @@ interface PostsState {
   items: Post[];
   loading: boolean;
   error: string | null;
+  total: number;
 }
 const initialState: PostsState = {
   items: [],
   loading: false,
   error: null,
+  total: 0,
 };
 const BASE_URL = "https://jsonplaceholder.typicode.com/posts";
 
-export const fetchPosts = createAsyncThunk<Post[]>(
-  "posts/fetchPosts",
-  async () => {
-    const response = await axios.get(BASE_URL);
-    return response.data;
-  }
-);
+export const fetchPosts = createAsyncThunk<
+  { data: Post[]; total: number },
+  { page: number; limit: number }
+>("posts/fetchPosts", async ({ page, limit }) => {
+  const response = await axios.get(BASE_URL, {
+    params: {
+      _page: page,
+      _limit: limit,
+    },
+  });
+  const total = Number(response.headers["x-total-count"] || 100);
+  return { data: response.data, total };
+});
 export const createPost = createAsyncThunk<
   Post,
   { title: string; body: string }
@@ -51,6 +59,14 @@ export const updatePost = createAsyncThunk<
   });
   return response.data;
 });
+// Async thunk to delete a post
+export const deletePost = createAsyncThunk<number, number>(
+  "posts/deletePost",
+  async (id) => {
+    await axios.delete(`${BASE_URL}/${id}`);
+    return id;
+  }
+);
 
 const postSlice = createSlice({
   name: "posts",
@@ -61,10 +77,14 @@ const postSlice = createSlice({
       .addCase(fetchPosts.pending, (state) => {
         state.loading = true;
       })
-      .addCase(fetchPosts.fulfilled, (state, action: PayloadAction<Post[]>) => {
-        state.loading = false;
-        state.items = action.payload;
-      })
+      .addCase(
+        fetchPosts.fulfilled,
+        (state, action: PayloadAction<{ data: Post[]; total: number }>) => {
+          state.loading = false;
+          state.items = action.payload.data;
+          state.total = action.payload.total;
+        }
+      )
       .addCase(fetchPosts.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message ?? "Something went wrong";
@@ -86,6 +106,9 @@ const postSlice = createSlice({
         if (index !== -1) {
           state.items[index] = action.payload;
         }
+      })
+      .addCase(deletePost.fulfilled, (state, action: PayloadAction<number>) => {
+        state.items = state.items.filter((post) => post.id !== action.payload);
       });
   },
 });

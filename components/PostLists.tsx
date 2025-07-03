@@ -1,5 +1,9 @@
 "use client";
-import { fetchPosts, updatePost } from "@/redux/features/posts/postSlice";
+import {
+  deletePost,
+  fetchPosts,
+  updatePost,
+} from "@/redux/features/posts/postSlice";
 import { AppDispatch, RootState } from "@/redux/store";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -10,15 +14,20 @@ function PostLists() {
     items: posts,
     loading,
     error,
+    total,
   } = useSelector((state: RootState) => state.posts);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const postsPerPage = 5;
   useEffect(() => {
-    dispatch(fetchPosts());
-  }, [dispatch]);
-
+    dispatch(fetchPosts({ page: currentPage, limit: postsPerPage }));
+  }, [dispatch, currentPage]);
+  const totalPages = Math.ceil(total / postsPerPage);
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
   const handleEdit = (post: { id: number; title: string; body: string }) => {
     setEditingId(post.id);
     setEditTitle(post.title);
@@ -101,11 +110,35 @@ function PostLists() {
                 >
                   Edit
                 </button>
+                <button
+                  className="bg-blue-400 px-5 py-2 rounded text-white ml-5"
+                  onClick={() => dispatch(deletePost(post.id))}
+                >
+                  Delete
+                </button>
               </>
             )}
           </li>
         ))}
       </ul>
+      <div style={{ marginTop: "1rem" }}>
+        {Array.from({ length: totalPages }, (_, i) => (
+          <button
+            key={i}
+            onClick={() => handlePageChange(i + 1)}
+            style={{
+              marginRight: "5px",
+              padding: "5px 10px",
+              background: i + 1 === currentPage ? "black" : "white",
+              color: i + 1 === currentPage ? "white" : "black",
+              border: "1px solid black",
+              cursor: "pointer",
+            }}
+          >
+            {i + 1}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
