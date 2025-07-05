@@ -1,9 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
 import postsReducer from "@/redux/features/posts/postSlice";
+import cartReducer from "@/redux/features/cart/cartSlice";
 
 export const store = configureStore({
   reducer: {
     posts: postsReducer,
+    cart: cartReducer,
   },
 });
 
